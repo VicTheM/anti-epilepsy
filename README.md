@@ -1,8 +1,8 @@
-# anti-epilepsy
+# Anti-epilepsy
 A device with &lt; 10ms response time to epilepsy seizure and automated aministration of antidote via microneedles. Juts a model though :)
 
 Project Timeline: [https://hackmd.io/@VicTheM/Sk5LHTkKee](https://hackmd.io/@VicTheM/Sk5LHTkKee)
---
+
 
 ## Contents
 1. [Introduction](#intoduction)
@@ -12,7 +12,6 @@ Project Timeline: [https://hackmd.io/@VicTheM/Sk5LHTkKee](https://hackmd.io/@Vic
 5. [Usage Instructions](#usage-instructions)  
 6. [Testing & Results](#testing--results)  
 7. [Future Work](#future-work)  
-8. [References](#references)
 
 
 ### Introduction
@@ -54,6 +53,51 @@ Subsystems were designed to achieve the four state of operation as listed above,
     - **Tank**: This is a basic-mini compartment to hold the antidote, it is air tight and the fluid can only come out through a pipe when pumped
     - **Pressure system**: This consist of the pipe and pump using to move the antidote from the compartment to the patient's skin
     - **Microneedle**: The microneedle is driven by a geared-linear actuator (servo motor) and it stamps the antidote into the skin with high torque and low speed to avoid pain and other negative possibilities.
-- **Communication Interface**: Connects to a mobile app for real-time monitoring and alerts.
+- **Communication Interface**: For now, this is a buzzer that sounds an alarm repeatedly till the seizure is over
+
+
+### Hardware Design
+The hardware design is centered around the ESP32 WroomD microcontroller, chosen for its size, dual-core processing capabilities, low power consumption, high clock frequency and enough memory for our runtime variables and static buffers. Transistors operating in the saturation region are used to drive every actuator and LED, in order to keep the esp32 pins safe and stay under the fan-out limit. The two sensors are connected to the esp32 as slaves and they communicate via I2C
 
 ![Schematics Diagram](./hardware/images/ANTI-EPILEPSY.SVG)
+
+**PIN CONNECTIONS**<br>
+
+***ESP - MPU6050***<br>
+_GPIO22 --- (SCL)_<br>
+_GPIO21 --- (SDA)_<br>
+
+***ESP - GYMAX30103***<br>
+_GPIO22 --- (SCL)_<br>
+_GPIO23 --- (SDA)_<br>
+
+***ESP - PUMP MOTOR***<br>
+_GPIO25 --- (SIGNAL)_<br>
+
+***ESP - MICRONEEDLE SERVO***<br>
+_GPIO26 --- (PWM)_<br>
+
+***ESP - BUZZER***<br>
+_GPIO19 --- (SIGNAL)_<br>
+
+***ESP - LED***<br>
+_GPIO18 --- (SIGNAL)_<br>
+
+### Software Architecture
+The application logic is implemented as a Finite State Machine (FSM) to manage the different states of the device (Standby, Actuating). and the actuating procedure is modeled by a behavioral tree that carries out a sequence of events in order (pump, stamp, stamp, stamp, stop). I took advantage of the Multi-core processor that an ESP32 WroomD has, hence the actuating code runs on a parallel core as the detecting code. The Arduino Framwork was used to build the code on a vscode IDE running a pioarduino extention, this greatly simplifies project organization and modularity for future improvement, refactoring and scaling.
+
+
+### Usage Instructions
+To be Updated...
+
+
+### Results
+To be Updated...
+
+
+### Future Work
+- Integrate a wireless communication mode of alarm, probably via an automated mobile call to the patient's official caregiver
+- Implement a data storage and data-logging system for seizure events and device performance metrics, also for ai data analysis and further insights
+- Make device smaller and more portable by using raw components instead of development boards
+- Improve seizure detection accuracy
+- Replace the current heartbeat rate sensor with a more reliable sensor
