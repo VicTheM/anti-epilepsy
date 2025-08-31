@@ -20,3 +20,12 @@ rad.json
 *.flf
 #Test results file
 TestResults.xml
+
+### PlatformIO ###
+.pio/
+.piolibdeps/
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
