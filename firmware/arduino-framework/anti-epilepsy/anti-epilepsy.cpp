@@ -1,4 +1,11 @@
+// anti-epilepsy.cpp
+
 #include "anti-epilepsy.h"
+
+byte rates[RATE_SIZE]; // Array of heart rate values
+byte rateSpot = 0;
+long lastBeat = 0; // Time at which the last beat occurred
+
 
 /**
  * Function to move servo to angle x, at speed s (degrees per second)
@@ -11,10 +18,11 @@
  */
 void moveServo(int x, int s, int y, Servo &myServo) {
   int currentPos = myServo.read();
+  int step = (x > currentPos) ? SERVO_STEP : -SERVO_STEP;
   int delayTime = 1000 / s;
 
   // Move to target angle
-  for (int pos = currentPos; pos != x; pos += SERVO_STEP) {
+  for (int pos = currentPos; pos != x; pos += step) {
     myServo.write(pos);
     delay(delayTime);
   }
@@ -23,7 +31,8 @@ void moveServo(int x, int s, int y, Servo &myServo) {
   delay(y); // wait at target
 
   // Return to initial position
-  for (int pos = x; pos != currentPos; pos -= SERVO_STEP) {
+  step = (currentPos > x) ? SERVO_STEP : -SERVO_STEP;
+  for (int pos = x; pos != currentPos; pos += step) {
     myServo.write(pos);
     delay(delayTime);
   }
@@ -82,14 +91,14 @@ void readMPU6050(Adafruit_MPU6050 &mpu, MPU6050Data &data) {
 }
 
 
-// Initialize MAX30102
-bool initMAX30102() {
+// Initialize MAX30105
+bool initMAX30105(MAX30105 &particleSensor) {
   if (!particleSensor.begin(Wire, I2C_SPEED_FAST)) {
-    Serial.println("MAX30102 was not found. Please check wiring/power.");
+    Serial.println("MAX30105 was not found. Please check wiring/power.");
     return false;
   }
 
-  Serial.println("MAX30102 Found! Place your finger on the sensor.");
+  Serial.println("MAX30105 Found! Place your finger on the sensor.");
 
   particleSensor.setup();                 // Default configuration
   particleSensor.setPulseAmplitudeRed(0x0A);   // Red LED low
@@ -100,7 +109,7 @@ bool initMAX30102() {
 
 
 // Read data into struct (passed by reference)
-void readMAX30102(MAX30102 &particleSensor, MAX30102Data &data) {
+void readMAX30105(MAX30105 &particleSensor, MAX30105Data &data) {
   data.irValue = particleSensor.getIR();
 
   if (checkForBeat(data.irValue)) {
