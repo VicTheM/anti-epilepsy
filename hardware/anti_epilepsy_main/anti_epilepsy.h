@@ -18,10 +18,10 @@
 
 // Pin Assignments
 const int PUMP_PIN = 25;
-const int INDICATOR_PIN = 18;
-const int BUZZER_PIN = 17;
+const int INDICATOR_PIN = 17;
+const int BUZZER_PIN = 18;
 const int DEBUG_SWITCH_PIN = 19;
-const int STATE_PIN = 16;
+const int SERVER_LIGHT_PIN = 2; 
 
 // Constants for servo control
 #define SERVO_PIN 13
@@ -38,6 +38,7 @@ const int STATE_PIN = 16;
 #define BPM_UPPER_THRESHOLD 120       // beats per minute
 #define BPM_LOWER_THRESHOLD 60         // beats per minute
 #define NO_FINGER_THRESHOLD 50000 // IR value below which no finger is detected
+#define IR_CAP_VALUE 70000 // IR value above which finger is definitely detected
 
 // Debug mode configuration
 #define DEBUG_AP_SSID "AntiEpilepsy"
@@ -113,5 +114,6 @@ String getStateParam(AsyncWebServerRequest *request);
 
 int getAndResetPressCount();
 void onButtonInterrupt();
+void handleButtonPress();
 
 #endif

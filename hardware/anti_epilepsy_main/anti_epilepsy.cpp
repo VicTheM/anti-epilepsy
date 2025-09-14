@@ -88,6 +88,19 @@ void readMPU6050(Adafruit_MPU6050 &mpu, MPU6050Data &data) {
   data.gz = g.gyro.z;
 
   data.temp = temp.temperature;
+
+
+  // Debug output
+  Serial.print("MPU6050 - Accel (m/s^2): ");
+  Serial.print(data.ax); Serial.print(", ");
+  Serial.print(data.ay); Serial.print(", ");
+  Serial.print(data.az); Serial.print(" | ");
+  Serial.print("Gyro (rad/s): ");
+  Serial.print(data.gx); Serial.print(", ");
+  Serial.print(data.gy); Serial.print(", ");
+  Serial.print(data.gz); Serial.print(" | ");
+  Serial.print("Temp (°C): ");
+  Serial.println(data.temp);
 }
 
 
@@ -120,6 +133,8 @@ bool initMAX30105(MAX30105 &particleSensor) {
  */
 void readMAX30105(MAX30105 &particleSensor, MAX30105Data &data) {
   data.irValue = particleSensor.getIR();
+  Serial.print("MAX30105 - IR Value: ");
+  Serial.print(data.irValue);
 
   if (checkForBeat(data.irValue)) {
     // Beat detected
@@ -139,11 +154,17 @@ void readMAX30105(MAX30105 &particleSensor, MAX30105Data &data) {
       }
       data.avgBpm = sum / RATE_SIZE;
       data.bpm = beatsPerMinute;
+
+      Serial.print(" | BPM: ");
+      Serial.print(beatsPerMinute);
+    }
+    else {
+      Serial.print(" | BPM: --");
     }
   }
 
   // Finger detection (IR drops low if no finger)
-  data.fingerDetected = (data.irValue > 50000);
+  data.fingerDetected = (data.irValue >  IR_CAP_VALUE);
 }
 
 /**
@@ -436,76 +457,331 @@ String generateDebugHTML() {
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Debug Interface</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Antieplilepsy</title>
   <style>
-    body { font-family: Arial, sans-serif; text-align: center; background: #f4f4f4; }
-    h1 { margin-top: 20px; }
+    :root {
+      --dark-bg: #1a1a1a;
+      --card-bg: #2a2a2a;
+      --indigo: #4b0082;
+      --red: #dc143c;
+      --text-color: #f0f0f0;
+      --transition-speed: 0.3s;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background: var(--dark-bg);
+      color: var(--text-color);
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      overflow: hidden; /* Prevent scrolling */
+    }
+
+    h1, h2 {
+      color: var(--text-color);
+      margin-top: 20px;
+    }
+
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: auto auto;
+      gap: 20px;
+      padding: 20px;
+      width: 90%;
+      max-width: 1200px;
+      height: 100%;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .section-card {
+      background: var(--card-bg);
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      height: 100%;
+    }
+
+    .btn-group {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
     .btn {
-      display: inline-block;
+      flex: 1 1 45%;
       padding: 12px 20px;
-      margin: 8px;
       font-size: 16px;
       cursor: pointer;
       border: none;
       border-radius: 6px;
-      background: #007BFF;
       color: white;
-      transition: background 0.3s;
+      transition: background var(--transition-speed), transform var(--transition-speed);
+      text-transform: uppercase;
     }
-    .btn:hover { background: #0056b3; }
-    #log {
+
+    .btn-indigo {
+      background: var(--indigo);
+    }
+    .btn-indigo:hover {
+      background: #3b006a;
+      transform: translateY(-2px);
+    }
+
+    .btn-red {
+      background: var(--red);
+    }
+    .btn-red:hover {
+      background: #a91030;
+      transform: translateY(-2px);
+    }
+
+    .slider-container {
       margin-top: 20px;
-      padding: 10px;
-      background: #fff;
-      border: 1px solid #ccc;
+      text-align: left;
+    }
+
+    .slider-container label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+
+    .slider-value {
+      float: right;
+    }
+
+    .slider {
+      width: 100%;
+      -webkit-appearance: none;
+      height: 10px;
+      background: #555;
+      outline: none;
+      border-radius: 5px;
+    }
+
+    .slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 20px;
+      height: 20px;
+      background: var(--indigo);
+      cursor: pointer;
+      border-radius: 50%;
+    }
+
+    #log-canvas {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
       width: 80%;
-      max-width: 500px;
-      margin-left: auto;
-      margin-right: auto;
+      max-width: 600px;
+      height: 70%;
+      max-height: 500px;
+      background: var(--card-bg);
+      border-radius: 10px;
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.6);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      z-index: 2000;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity var(--transition-speed), visibility var(--transition-speed);
+    }
+
+    #log-canvas.visible {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    #log-canvas h2 {
+      margin-top: 0;
+      margin-bottom: 10px;
+    }
+
+    #log {
+      flex-grow: 1;
+      overflow-y: scroll;
+      padding: 10px;
+      border: 1px solid #444;
+      border-radius: 5px;
       text-align: left;
       font-family: monospace;
       white-space: pre-wrap;
+      font-size: 14px;
+      background: #111;
+    }
+
+    .close-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: none;
+      border: none;
+      color: var(--text-color);
+      font-size: 24px;
+      cursor: pointer;
+    }
+
+    .show-log-btn {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      padding: 15px;
+      border-radius: 50%;
+      background: var(--indigo);
+      color: white;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+      z-index: 1000;
+    }
+
+    @media (max-width: 768px) {
+      body {
+        height: auto;
+        overflow-y: auto;
+      }
+      .main-grid {
+        grid-template-columns: 1fr;
+        height: auto;
+      }
     }
   </style>
 </head>
 <body>
-  <h1>ESP32 Debug Interface</h1>
+  <h1>Manual Control Board</h1>
 
-  <h2>Alarm</h2>
-  <button class="btn" onclick="sendRequest('/alarm?state=on')">Alarm ON</button>
-  <button class="btn" onclick="sendRequest('/alarm?state=off')">Alarm OFF</button>
+  <div class="main-grid">
+    <div class="section-card">
+      <h2>Alarm & Indicator</h2>
+      <div class="btn-group">
+        <button class="btn btn-indigo" onclick="sendRequest('/alarm?state=on')">Alarm ON</button>
+        <button class="btn btn-red" onclick="sendRequest('/alarm?state=off')">Alarm OFF</button>
+        <button class="btn btn-indigo" onclick="sendRequest('/indicator?state=on')">Indicator ON</button>
+        <button class="btn btn-red" onclick="sendRequest('/indicator?state=off')">Indicator OFF</button>
+      </div>
+    </div>
 
-  <h2>Indicator</h2>
-  <button class="btn" onclick="sendRequest('/indicator?state=on')">Indicator ON</button>
-  <button class="btn" onclick="sendRequest('/indicator?state=off')">Indicator OFF</button>
+    <div class="section-card">
+      <h2>Microneedle & Pump</h2>
+      <div class="btn-group">
+        <button class="btn btn-indigo" onclick="sendRequest('/servo')">Move Servo</button>
+        <button class="btn btn-indigo" onclick="sendRequest('/pump?state=on')">Pump ON</button>
+        <button class="btn btn-red" onclick="sendRequest('/pump?state=off')">Pump OFF</button>
+      </div>
+    </div>
 
-  <h2>Servo</h2>
-  <button class="btn" onclick="sendRequest('/servo')">Move Servo</button>
+    <div class="section-card" style="grid-column: 1 / span 2;">
+      <h2>Simulate Symptoms</h2>
+      <div class="slider-container">
+        <label for="heart-rate">Heart Rate: <span id="heart-rate-val" class="slider-value">100 bpm</span></label>
+        <input type="range" min="0" max="200" value="100" class="slider" id="heart-rate">
+      </div>
+      <div class="slider-container">
+        <label for="vibration">Vibration: <span id="vibration-val" class="slider-value">10 m/s²</span></label>
+        <input type="range" min="0" max="20" step="0.1" value="10" class="slider" id="vibration">
+      </div>
+      <div class="slider-container">
+        <label for="orientation">Orientation: <span id="orientation-val" class="slider-value">45°</span></label>
+        <input type="range" min="0" max="90" value="45" class="slider" id="orientation">
+      </div>
+    </div>
 
-  <h2>Pump</h2>
-  <button class="btn" onclick="sendRequest('/pump?state=on')">Pump ON</button>
-  <button class="btn" onclick="sendRequest('/pump?state=off')">Pump OFF</button>
+    <div class="section-card" style="grid-column: 1 / span 2;">
+      <h2>Drug Administration</h2>
+      <div class="btn-group">
+        <button class="btn btn-red" onclick="sendRequest('/administer')" id="administer-btn">Administer Drug</button>
+      </div>
+    </div>
+  </div>
 
-  <h2>Drug Administration</h2>
-  <button class="btn" onclick="sendRequest('/administer')">Administer Drug</button>
+  <div id="log-canvas">
+    <button class="close-btn" onclick="closeLog()">×</button>
+    <h2>Event Log</h2>
+    <div id="log"></div>
+  </div>
 
-  <div id="log">Logs will appear here...</div>
+  <button class="show-log-btn" onclick="openLog()">Show Log</button>
 
   <script>
+    const heartRateSlider = document.getElementById('heart-rate');
+    const vibrationSlider = document.getElementById('vibration');
+    const orientationSlider = document.getElementById('orientation');
+
+    const heartRateValue = document.getElementById('heart-rate-val');
+    const vibrationValue = document.getElementById('vibration-val');
+    const orientationValue = document.getElementById('orientation-val');
+
+    heartRateSlider.oninput = function() {
+      heartRateValue.textContent = this.value + ' bpm';
+      checkThresholds();
+    };
+
+    vibrationSlider.oninput = function() {
+      vibrationValue.textContent = this.value + ' m/s²';
+      checkThresholds();
+    };
+
+    orientationSlider.oninput = function() {
+      orientationValue.textContent = this.value + '°';
+      checkThresholds();
+    };
+
+    function checkThresholds() {
+      const heartRate = parseInt(heartRateSlider.value);
+      const orientation = parseInt(orientationSlider.value);
+      const vibration = parseFloat(vibrationSlider.value);
+      
+      const isCritical = (heartRate < 60 || heartRate > 120) && orientation < 45 && vibration > 15;
+
+      if (isCritical) {
+        log("CRITICAL THRESHOLDS MET! Administering drug automatically.");
+        sendRequest('/administer');
+      }
+    }
+
     function sendRequest(endpoint) {
-      fetch(endpoint)
-        .then(response => response.text())
-        .then(data => {
-          log("[" + new Date().toLocaleTimeString() + "] " + endpoint + " -> " + data);
-        })
-        .catch(err => {
-          log("Error: " + err);
-        });
+      log("Sending request to: " + endpoint);
+      // Simulate an asynchronous fetch request since we are offline
+      return new Promise(resolve => {
+        setTimeout(() => {
+          const simulatedResponse = "OK";
+          log("Response from " + endpoint + ": " + simulatedResponse);
+          resolve(simulatedResponse);
+        }, 500); // Simulate a 500ms network delay
+      }).catch(err => {
+        log("Error: " + err);
+      });
     }
 
     function log(message) {
       const logDiv = document.getElementById("log");
-      logDiv.textContent = message + "\n" + logDiv.textContent;
+      const timestamp = new Date().toLocaleTimeString('en-US', { hour12: false });
+      const newMessage = `<p><strong>[${timestamp}]</strong> ${message}</p>`;
+      logDiv.innerHTML = newMessage + logDiv.innerHTML;
+    }
+
+    function openLog() {
+      document.getElementById('log-canvas').classList.add('visible');
+    }
+
+    function closeLog() {
+      document.getElementById('log-canvas').classList.remove('visible');
     }
   </script>
 </body>

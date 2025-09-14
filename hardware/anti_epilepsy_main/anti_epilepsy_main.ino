@@ -7,7 +7,7 @@ MPU6050Data mpuData;
 MAX30105 particleSensor;
 MAX30105Data heartData;
 
-Button stateButton = {0, 0};
+volatile Button stateButton = {0, 0};
 
 DeviceState currentState = NORMAL_MODE;
 bool debugModeInitialized = false;
@@ -32,6 +32,9 @@ void setup() {
   pinMode(INDICATOR_PIN, OUTPUT);
   digitalWrite(INDICATOR_PIN, LOW);
 
+  pinMode(SERVER_LIGHT_PIN, OUTPUT);
+  digitalWrite(SERVER_LIGHT_PIN, LOW);
+
   pinMode(BUZZER_PIN, OUTPUT);
   digitalWrite(BUZZER_PIN, LOW);
 
@@ -47,7 +50,7 @@ void setup() {
   readMPU6050(mpu, mpuData);
   readMAX30105(particleSensor, heartData);
 
-  attachInterrupt(digitalPinToInterrupt(STATE_PIN), onButtonInterrupt, FALLING);
+  attachInterrupt(digitalPinToInterrupt(DEBUG_SWITCH_PIN), onButtonInterrupt, FALLING);
   Serial.println("Setup Completed");
 }
 
@@ -55,17 +58,19 @@ void loop() {
 
   // Configuring state
   int count = getAndResetPressCount();
-  if (count == 1 && currentState == NORMAL_MODE) {
+  if (count > 1 && currentState == NORMAL_MODE) {
     // Switch to debug mode
     currentState = DEBUG_MODE;
     initDebugMode();
     debugModeInitialized = true;
+    digitalWrite(SERVER_LIGHT_PIN, HIGH);
     Serial.println("Debug switch activated - switching to DEBUG MODE");
-  } else if (count == 2 && currentState == DEBUG_MODE) {
+  } else if (count == 1 && currentState == DEBUG_MODE) {
     // Switch back to normal mode
     currentState = NORMAL_MODE;
     endDebugMode();
     debugModeInitialized = false;
+    digitalWrite(SERVER_LIGHT_PIN, LOW);
     Serial.println("Debug switch deactivated - switching to NORMAL MODE");
   }
 
@@ -79,7 +84,7 @@ void loop() {
     
     if (checkForSeizure(mpuData, heartData)) {
       Serial.println("SEIZURE DETECTED - Administering medication");
-      administerDrug(microneedleServo);
+      // administerDrug(microneedleServo);
     }
   }
   delay(100);
@@ -88,11 +93,14 @@ void loop() {
 
 // ISR function - called directly by the hardware interrupt
 void IRAM_ATTR onButtonInterrupt() {
+  handleButtonPress();
+}
+
+void handleButtonPress() {
     unsigned long currentTime = millis();
     if (currentTime - stateButton.lastPressTime > CLICK_DEBOUNCE_MS) {
         stateButton.lastPressTime = currentTime;
         stateButton.nPresses = stateButton.nPresses + 1;
-        // Serial.printf("[PeripheralHandler] ISR: Press detected, count = %u\n", stateButton.nPresses);
     }
 }
 
@@ -101,21 +109,20 @@ int getAndResetPressCount() {
   if (stateButton.nPresses > 0) {
     unsigned long currentTime = millis();
     if (currentTime - stateButton.lastPressTime > MULTI_CLICK_TIMEOUT_MS) {
-        // Disable interrupts briefly to safely read and reset volatile variables
-        noInterrupts();
-        clicks = stateButton.nPresses;
-        interrupts();
-
-        // Serial.printf("[PeripheralHandler] Detected %u clicks.\n", clicks);
-        return clicks;
+      noInterrupts();
+      clicks = stateButton.nPresses;
+      interrupts();
     }
     else {
-        delay(MULTI_CLICK_TIMEOUT_MS);
-        clicks = stateButton.nPresses; // Capture the current count
-        return clicks;
+      delay(MULTI_CLICK_TIMEOUT_MS);
+      noInterrupts();
+      clicks = stateButton.nPresses;
+      interrupts();
     }
-
     stateButton.nPresses = 0;
   }
+  
+  Serial.print("Clicks: ");
+  Serial.println(clicks);
   return clicks;
 }
