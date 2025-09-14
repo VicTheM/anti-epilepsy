@@ -11,12 +11,10 @@
 #include <Adafruit_MPU6050.h>
 #include <Adafruit_Sensor.h>
 #include <Wire.h>
-#include <Wire.h>
 #include "MAX30105.h"
 #include "heartRate.h"
 #include <WiFi.h>
 #include <ESPAsyncWebServer.h>
-#include <WebServer.h>
 
 // Pin Assignments
 const int PUMP_PIN = 25;

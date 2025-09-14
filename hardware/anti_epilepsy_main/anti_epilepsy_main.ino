@@ -57,7 +57,6 @@ void loop() {
   int count = getAndResetPressCount();
   if (count == 1 && currentState == NORMAL_MODE) {
     // Switch to debug mode
-    stateButton.pressed = false;
     currentState = DEBUG_MODE;
     initDebugMode();
     debugModeInitialized = true;
@@ -65,7 +64,6 @@ void loop() {
   } else if (count == 2 && currentState == DEBUG_MODE) {
     // Switch back to normal mode
     currentState = NORMAL_MODE;
-    stateButton.pressed = false;
     endDebugMode();
     debugModeInitialized = false;
     Serial.println("Debug switch deactivated - switching to NORMAL MODE");

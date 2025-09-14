@@ -313,6 +313,11 @@ String getStateParam(AsyncWebServerRequest *request) {
   return "";
 }
 
+void handleRoot(AsyncWebServerRequest *request) {
+  request->send(200, "text/html", generateDebugHTML());
+  Serial.println("Debug: Root page served");
+}
+
 /**
  * Handle alarm button - set alarm on/off via query string, else toggle
  */
