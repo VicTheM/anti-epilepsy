@@ -17,7 +17,8 @@
 #include <ESPAsyncWebServer.h>
 
 // Pin Assignments
-const int PUMP_PIN = 25;
+// const int PUMP_PIN = 25;
+const int PUMP_PIN = 27;
 const int INDICATOR_PIN = 17;
 const int BUZZER_PIN = 18;
 const int DEBUG_SWITCH_PIN = 19;
@@ -25,8 +26,8 @@ const int SERVER_LIGHT_PIN = 2;
 
 // Constants for servo control
 #define SERVO_PIN 13
-#define SERVO_MIN 0
-#define SERVO_MAX 180
+#define SERVO_MIN 120
+#define SERVO_MAX 55
 #define SERVO_STEP 1
 #define SERVO_DELAY 15
 #define RATE_SIZE 4
@@ -37,7 +38,7 @@ const int SERVER_LIGHT_PIN = 2;
 #define GYRO_THRESHOLD 3.0      // rad/s
 #define BPM_UPPER_THRESHOLD 120       // beats per minute
 #define BPM_LOWER_THRESHOLD 60         // beats per minute
-#define NO_FINGER_THRESHOLD 50000 // IR value below which no finger is detected
+#define NO_FINGER_THRESHOLD 5000000 // IR value below which no finger is detected
 #define IR_CAP_VALUE 70000 // IR value above which finger is definitely detected
 
 // Debug mode configuration

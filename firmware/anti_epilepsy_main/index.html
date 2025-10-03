@@ -302,16 +302,14 @@
 
     function sendRequest(endpoint) {
       log("Sending request to: " + endpoint);
-      // Simulate an asynchronous fetch request since we are offline
-      return new Promise(resolve => {
-        setTimeout(() => {
-          const simulatedResponse = "OK";
-          log("Response from " + endpoint + ": " + simulatedResponse);
-          resolve(simulatedResponse);
-        }, 500); // Simulate a 500ms network delay
-      }).catch(err => {
-        log("Error: " + err);
-      });
+      fetch(endpoint)
+        .then(response => response.text())
+        .then(data => {
+          log("[" + new Date().toLocaleTimeString() + "] " + endpoint + " -> " + data);
+        })
+        .catch(err => {
+          log("Error: " + err);
+        });
     }
 
     function log(message) {

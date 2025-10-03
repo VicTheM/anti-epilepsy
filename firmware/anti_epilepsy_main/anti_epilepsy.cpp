@@ -25,16 +25,18 @@ void moveServo(int x, int s, int y, Servo &myServo) {
   for (int pos = currentPos; pos != x; pos += step) {
     myServo.write(pos);
     delay(delayTime);
+    yield();
   }
   myServo.write(x);
 
-  delay(y); // wait at target
+  // delay(y); // wait at target
 
   // Return to initial position
   step = (currentPos > x) ? SERVO_STEP : -SERVO_STEP;
   for (int pos = x; pos != currentPos; pos += step) {
     myServo.write(pos);
     delay(delayTime);
+    yield();
   }
   myServo.write(currentPos);
 }
@@ -91,16 +93,16 @@ void readMPU6050(Adafruit_MPU6050 &mpu, MPU6050Data &data) {
 
 
   // Debug output
-  Serial.print("MPU6050 - Accel (m/s^2): ");
-  Serial.print(data.ax); Serial.print(", ");
-  Serial.print(data.ay); Serial.print(", ");
-  Serial.print(data.az); Serial.print(" | ");
-  Serial.print("Gyro (rad/s): ");
-  Serial.print(data.gx); Serial.print(", ");
-  Serial.print(data.gy); Serial.print(", ");
-  Serial.print(data.gz); Serial.print(" | ");
-  Serial.print("Temp (°C): ");
-  Serial.println(data.temp);
+  // Serial.print("MPU6050 - Accel (m/s^2): ");
+  // Serial.print(data.ax); Serial.print(", ");
+  // Serial.print(data.ay); Serial.print(", ");
+  // Serial.print(data.az); Serial.print(" | ");
+  // Serial.print("Gyro (rad/s): ");
+  // Serial.print(data.gx); Serial.print(", ");
+  // Serial.print(data.gy); Serial.print(", ");
+  // Serial.print(data.gz); Serial.print(" | ");
+  // Serial.print("Temp (°C): ");
+  // Serial.println(data.temp);
 }
 
 
@@ -116,7 +118,7 @@ bool initMAX30105(MAX30105 &particleSensor) {
     return false;
   }
 
-  Serial.println("MAX30105 Found! Place your finger on the sensor.");
+  // Serial.println("MAX30105 Found! Place your finger on the sensor.");
 
   particleSensor.setup();                 // Default configuration
   particleSensor.setPulseAmplitudeRed(0x0A);   // Red LED low
@@ -133,8 +135,8 @@ bool initMAX30105(MAX30105 &particleSensor) {
  */
 void readMAX30105(MAX30105 &particleSensor, MAX30105Data &data) {
   data.irValue = particleSensor.getIR();
-  Serial.print("MAX30105 - IR Value: ");
-  Serial.print(data.irValue);
+  // Serial.print("MAX30105 - IR Value: ");
+  // Serial.print(data.irValue);
 
   if (checkForBeat(data.irValue)) {
     // Beat detected
@@ -155,11 +157,11 @@ void readMAX30105(MAX30105 &particleSensor, MAX30105Data &data) {
       data.avgBpm = sum / RATE_SIZE;
       data.bpm = beatsPerMinute;
 
-      Serial.print(" | BPM: ");
+      // Serial.print(" | BPM: ");
       Serial.print(beatsPerMinute);
     }
     else {
-      Serial.print(" | BPM: --");
+      // Serial.print(" | BPM: --");
     }
   }
 
@@ -248,42 +250,16 @@ void administerDrug(Servo &myServo) {
   // Step 1: Pump serum out
   onPump();
   delay(500);
+  yield();
   offPump();
   
-  // Step 2: Beep alarm 3 times, Step 3: Blink light 3 times
-  for (int i = 0; i < 3; i++) {
-    onAlarm();
-    onIndicator();
-    delay(300);
-    offAlarm();
-    offIndicator();
-    delay(200);
-  }
-  
-  // Step 4: Move servo 3 times while continuously beeping and blinking
-  Serial.println("Starting microneedle injection sequence");
-  
-  for (int cycle = 0; cycle < 3; cycle++) {
-    Serial.print("Injection cycle ");
-    Serial.println(cycle + 1);
-    
-    // Use moveServo function: move to 180°, speed 10°/s, wait 200ms at target
-    // This automatically returns to initial position (0°)
-    moveServo(180, 10, 200, myServo);
-    
-    for (int i = 0; i < 3; i++) {
-      onAlarm();
-      onIndicator();
-      delay(300);
-      offAlarm();
-      offIndicator();
-      delay(200);
-    }
-    
-  }
+  onAlarm();
+  onIndicator();
+
+  moveServo(SERVO_MAX, 30, 1000, myServo);
   
   // Ensure servo is at home position and all outputs are off
-  myServo.write(0);
+  // myServo.write(SERVO_MIN);
   offAlarm();
   offIndicator();
   offPump();
@@ -403,8 +379,8 @@ void handleIndicator(AsyncWebServerRequest *request) {
  */
 void handleServo(AsyncWebServerRequest *request) {
   Serial.println("Debug: Servo test initiated via web interface");
-  moveServo(90, 30, 1000, microneedleServo);
-  request->send(200, "text/plain", "Servo moved to 90° and back");
+  moveServo(SERVO_MAX, 30, 1000, microneedleServo);
+  request->send(200, "text/plain", "Servo moved");
 }
 
 /**
@@ -757,16 +733,14 @@ String generateDebugHTML() {
 
     function sendRequest(endpoint) {
       log("Sending request to: " + endpoint);
-      // Simulate an asynchronous fetch request since we are offline
-      return new Promise(resolve => {
-        setTimeout(() => {
-          const simulatedResponse = "OK";
-          log("Response from " + endpoint + ": " + simulatedResponse);
-          resolve(simulatedResponse);
-        }, 500); // Simulate a 500ms network delay
-      }).catch(err => {
-        log("Error: " + err);
-      });
+      fetch(endpoint)
+        .then(response => response.text())
+        .then(data => {
+          log("[" + new Date().toLocaleTimeString() + "] " + endpoint + " -> " + data);
+        })
+        .catch(err => {
+          log("Error: " + err);
+        });
     }
 
     function log(message) {
@@ -786,5 +760,5 @@ String generateDebugHTML() {
   </script>
 </body>
 </html>
-  )rawliteral";
+)rawliteral";
 }
